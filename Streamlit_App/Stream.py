@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 # 1. CORE LAYOUT AND COMPONENT CONFIGURATION
 # ==========================================
 st.set_page_config(page_title="Employee Attrition Predictor", layout="centered")
-st.title("Employee Attrition Prediction App")
+st.title("🎯 Employee Attrition Prediction App")
 st.write("Enter the employee's metrics below to evaluate their retention risk.")
 
 @st.cache_resource
