@@ -5,6 +5,7 @@ import pickle
 import os
 import plotly.graph_objects as go
 import plotly.express as px
+MAX_UPLOAD_SIZE = 150 * 1024 * 1024  
 
 # ==========================================
 # 1. CORE LAYOUT AND COMPONENT CONFIGURATION
@@ -12,6 +13,7 @@ import plotly.express as px
 st.set_page_config(page_title="Employee Attrition Predictor", layout="centered")
 st.title("📊 Employee Attrition Prediction App")
 st.write("Enter the employee's metrics below or upload an HR data spreadsheet to evaluate retention risks.")
+
 
 @st.cache_resource
 def load_model_objects():
@@ -35,7 +37,9 @@ def load_model_objects():
         st.error("❌ Error: Missing required pipeline components. Ensure your saved pkl files are in the directory.")
         return None, None, None
 
+
 model, scaler, expected_features = load_model_objects()
+
 
 # Speedometer/Gauge Chart Component Construction
 def create_gauge_chart(probability, title="Risk Spectrum Index", height=280):
@@ -64,6 +68,7 @@ def create_gauge_chart(probability, title="Risk Spectrum Index", height=280):
     fig.update_layout(height=height, margin=dict(l=20, r=20, t=50, b=10), paper_bgcolor='rgba(0,0,0,0)')
     return fig
 
+
 # UI Setup if model elements are valid
 if model is not None:
     tab1, tab2 = st.tabs(["👤 Single Profile Evaluation", "📂 Batch Analytics Module (CSV)"])
@@ -85,8 +90,8 @@ if model is not None:
 
         with col2:
             years_since_promotion = st.number_input("Years Since Last Promotion", min_value=0, value=1)
-            env_satisfaction = st.selectbox("Environment Satisfaction", [1, 2, 3, 4], index=2, format_func=lambda x: f"{x} - " + ["Low", "Medium", "High", "Very High"][x-1])
-            job_involvement = st.selectbox("Job Involvement", [1, 2, 3, 4], index=2, format_func=lambda x: f"{x} - " + ["Low", "Medium", "High", "Very High"][x-1])
+            env_satisfaction = st.selectbox("Environment Satisfaction", [1, 2, 3, 4], index=2)
+            job_involvement = st.selectbox("Job Involvement", [1, 2, 3, 4], index=2)
             overtime = st.selectbox("Works Overtime?", ["No", "Yes"], index=0)
 
         business_travel = st.selectbox("Business Travel Frequency", ["Travel_Rarely", "Travel_Frequently", "Non-Travel"], index=0)
@@ -152,12 +157,22 @@ if model is not None:
         st.subheader("Dynamic Spreadsheet Screener")
         st.write("Upload an active HR dataset matrix (.csv) to isolate enterprise trends and extract probability scoring across metrics.")
 
-        uploaded_file = st.file_uploader("Upload Target Document (CSV Format)", type=["csv"])
+        # ✅ CHANGED: Shows "150 MB" next to upload option
+        uploaded_file = st.file_uploader(
+            "Upload Target Document (CSV Format) - Max 150 MB",  # Added text showing size
+            type=["csv"]
+        )
 
         if uploaded_file is not None:
+            # Check file size
+            file_size = uploaded_file.size
+            if file_size > MAX_UPLOAD_SIZE:
+                st.error(f"❌ File size ({file_size / (1024*1024):.2f} MB) exceeds 150 MB limit!")
+                st.stop()
+            
             try:
                 raw_batch = pd.read_csv(uploaded_file)
-                st.info(f"Data parsed smoothly. Extracted {raw_batch.shape[0]} candidate observation profiles.")
+                st.info(f"✅ Data parsed smoothly. File size: {file_size / (1024*1024):.2f} MB | Extracted {raw_batch.shape[0]} candidate observation profiles.")
 
                 if st.button("Run Bulk Prediction Engine", use_container_width=True):
                     # Ensure matching transformation processes on uploaded file data
@@ -199,16 +214,16 @@ if model is not None:
                         st.metric(label="Average Retention Probability", value=f"{avg_retention * 100:.2f}%")
 
                     st.divider()
-                    st.subheader(" Bars & Analytics Dashboard Insights")
+                    st.subheader("📊 Bars & Analytics Dashboard Insights")
 
                     col_g1, col_g2 = st.columns(2)
 
                     with col_g1:
                         st.markdown("##### Attrition Risk Classification Breakdown")
                         fig_pie = px.pie(output_df, names='AI Risk Status',
-                                         color='AI Risk Status',
-                                         color_discrete_map={'⚠️ High Risk': '#dc3545', '✅ Low Risk': '#28a745'},
-                                         hole=0.4)
+                                        color='AI Risk Status',
+                                        color_discrete_map={'⚠️ High Risk': '#dc3545', '✅ Low Risk': '#28a745'},
+                                        hole=0.4)
                         fig_pie.update_layout(margin=dict(l=10, r=10, t=20, b=10), height=260)
                         st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -216,9 +231,9 @@ if model is not None:
                         if 'OverTime' in output_df.columns:
                             st.markdown("##### OverTime Impact vs Average Attrition Probability")
                             fig_bar = px.bar(output_df.groupby('OverTime')['Attrition Probability (%)'].mean().reset_index(),
-                                             x='OverTime', y='Attrition Probability (%)',
-                                             labels={'Attrition Probability (%)': 'Avg Attrition Score (%)'},
-                                             color='OverTime', color_discrete_sequence=['#2563eb', '#cbd5e1'])
+                                            x='OverTime', y='Attrition Probability (%)',
+                                            labels={'Attrition Probability (%)': 'Avg Attrition Score (%)'},
+                                            color='OverTime', color_discrete_sequence=['#2563eb', '#cbd5e1'])
                             fig_bar.update_layout(margin=dict(l=10, r=10, t=20, b=10), height=260, showlegend=False)
                             st.plotly_chart(fig_bar, use_container_width=True)
                         else:
@@ -240,6 +255,7 @@ if model is not None:
 
             except Exception as batch_error:
                 st.error(f"Operational pipeline parsing exception error: {batch_error}")
+
 
 st.markdown("<br><hr>", unsafe_allow_html=True)
 st.caption("Deployment Core Architecture | Production Stable v2.2")
