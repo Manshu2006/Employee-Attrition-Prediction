@@ -23,6 +23,8 @@ def load_model_objects():
             base_path = "Model"
         elif os.path.exists("../Model"):
             base_path = "../Model"
+        elif os.path.exists("/mount/src/employee-attrition-prediction/Model"):
+            base_path = "/mount/src/employee-attrition-prediction/Model"
         else:
             st.error("❌ Model directory not found!")
             return None
@@ -98,9 +100,7 @@ if model is not None:
         work_life_balance = st.selectbox("Work Life Balance", [1, 2, 3, 4], index=2)
         education_field = st.selectbox(
             "Education Field",
-            ["Medical", "Tech-Do
-
-main", "Law", "Earth Sciences", "Marketing", "Human Resources"],
+            ["Medical", "Technology", "Law", "Earth Sciences", "Marketing", "Human Resources"],
             index=0
         )
     
@@ -112,14 +112,14 @@ main", "Law", "Earth Sciences", "Marketing", "Human Resources"],
     with col3:
         department = st.selectbox(
             "Department",
-            ["Sales", "Research & Development", "Human Resources"],
+            ["Sales", "Research and Development", "Human Resources"],
             index=0
         )
         job_role = st.selectbox(
             "Job Role",
             ["Sales Executive", "Research Scientist", "Laboratory Technician", 
              "Sales Representative", "Research Director", "Manufacturing Director",
-             "Healthcare Representative", "Manager", "Trader"],
+             "Healthcare Representative", "Manager", "Trainee"],
             index=0
         )
         marital_status = st.selectbox(
@@ -246,7 +246,7 @@ main", "Law", "Earth Sciences", "Marketing", "Human Resources"],
             st.info("• Engage in career development discussions")
             st.info("• Check satisfaction with management")
         else:
-            st.success("• Low risk - Employee appears稳定")
+            st.success("• Low risk - Employee appears stable")
             st.success("• Continue current engagement practices")
             st.success("• Consider for leadership development")
 
