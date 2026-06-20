@@ -12,12 +12,10 @@ st.title("🎯 Employee Attrition Prediction App")
 st.write("Enter employee metrics below to evaluate retention risk.")
 
 # ==========================================
-# LOAD MODEL OBJECTS
+# LOAD MODEL OBJECTS (SIMPLIFIED - NO CACHE)
 # ==========================================
-@st.cache_resource
 def load_model_objects():
-    # Try multiple paths
-    paths = ["Model", "../Model", os.path.join(os.getcwd(), "Model")]
+    paths = ["Model", "../Model"]
     
     for base_path in paths:
         if os.path.exists(base_path):
@@ -28,11 +26,13 @@ def load_model_objects():
                 categorical_cols = pickle.load(open(os.path.join(base_path, 'categorical_cols.pkl'), 'rb'))
                 return model, scaler, expected_features, categorical_cols
             except Exception as e:
+                st.warning(f"Trying path {base_path}: {e}")
                 continue
     
     st.error("❌ Model files not found! Run Employee_Attrition.ipynb first.")
     return None, None, None, None
 
+# Load immediately (not in function)
 model, scaler, expected_features, categorical_cols = load_model_objects()
 
 # ==========================================
@@ -66,6 +66,7 @@ def create_gauge_chart(probability, title="Risk Spectrum", height=320):
 # MAIN APP
 # ==========================================
 if model is not None:
+    st.success("✅ Model loaded successfully!")
     st.divider()
     st.subheader("📋 Employee Information")
     
@@ -116,13 +117,13 @@ if model is not None:
         
         input_df = pd.DataFrame(raw_data)
         
-        # STEP 1: Create engineered features (MUST MATCH TRAINING!)
+        # STEP 1: Create engineered features
         input_df['TotalWorkingYears_Replaced'] = input_df['TotalWorkingYears'].replace(0, 1)
         input_df['YearsAtCompanyRatio'] = input_df['YearsAtCompany'] / input_df['TotalWorkingYears_Replaced']
         input_df['PromotionDelay'] = input_df['YearsAtCompany'] - input_df['YearsSinceLastPromotion']
         input_df['WorkLifeRiskIndex'] = input_df['JobSatisfaction'] + input_df['EnvironmentSatisfaction'] + input_df['WorkLifeBalance']
         
-        # STEP 2: Encode categorical (EXACTLY LIKE TRAINING)
+        # STEP 2: Encode categorical
         input_encoded = pd.get_dummies(input_df, columns=categorical_cols, drop_first=True)
         
         # STEP 3: Create DataFrame with ALL expected columns
@@ -160,6 +161,7 @@ if model is not None:
             st.metric(label="Probability of Staying", value=f"{retention_probability * 100:.1f}%")
 
 else:
-    st.warning("💡 Please run Employee_Attrition.ipynb first to create Model files!")
+    st.error("❌ Model not loaded. Please check:")
+    st.code("1. Run Employee_Attrition.ipynb first\n2. Check Model/ folder exists\n3. Verify all 5 .pkl files are present")
 
-st.caption("Employee Attrition Predictor v3.0")
+st.caption("Employee Attrition Predictor v3.1 - Fixed")
