@@ -4,16 +4,10 @@ import pickle
 import os
 import plotly.graph_objects as go
 
-# ==========================================
-# PAGE CONFIG
-# ==========================================
 st.set_page_config(page_title="Employee Attrition Predictor", layout="centered")
 st.title("🎯 Employee Attrition Prediction App")
 st.write("Enter employee metrics below to evaluate retention risk.")
 
-# ==========================================
-# LOAD MODEL OBJECTS (SIMPLIFIED - NO CACHE)
-# ==========================================
 def load_model_objects():
     paths = ["Model", "../Model"]
     
@@ -25,23 +19,17 @@ def load_model_objects():
                 expected_features = pickle.load(open(os.path.join(base_path, 'features.pkl'), 'rb'))
                 categorical_cols = pickle.load(open(os.path.join(base_path, 'categorical_cols.pkl'), 'rb'))
                 return model, scaler, expected_features, categorical_cols
-            except Exception as e:
-                st.warning(f"Trying path {base_path}: {e}")
+            except:
                 continue
     
     st.error("❌ Model files not found! Run Employee_Attrition.ipynb first.")
     return None, None, None, None
 
-# Load immediately (not in function)
 model, scaler, expected_features, categorical_cols = load_model_objects()
 
-# ==========================================
-# GAUGE CHART
-# ==========================================
 def create_gauge_chart(probability, title="Risk Spectrum", height=320):
     prob_percent = probability * 100
     level_color = "#28a745" if prob_percent < 30 else ("#ffc107" if prob_percent < 70 else "#dc3545")
-    
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=prob_percent,
@@ -62,9 +50,6 @@ def create_gauge_chart(probability, title="Risk Spectrum", height=320):
     fig.update_layout(height=height, margin=dict(l=20, r=20, t=50, b=10))
     return fig
 
-# ==========================================
-# MAIN APP
-# ==========================================
 if model is not None:
     st.success("✅ Model loaded successfully!")
     st.divider()
@@ -105,7 +90,6 @@ if model is not None:
     st.divider()
     
     if st.button("🎯 Predict Attrition Risk", type="primary", use_container_width=True):
-        # Create input DataFrame with ALL 18 columns
         raw_data = {
             'Age': [age], 'MonthlyIncome': [monthly_income], 'TotalWorkingYears': [total_working_years],
             'NumCompaniesWorked': [num_companies], 'YearsAtCompany': [years_at_company], 'Education': [education],
@@ -116,25 +100,18 @@ if model is not None:
         }
         
         input_df = pd.DataFrame(raw_data)
-        
-        # STEP 1: Create engineered features
         input_df['TotalWorkingYears_Replaced'] = input_df['TotalWorkingYears'].replace(0, 1)
         input_df['YearsAtCompanyRatio'] = input_df['YearsAtCompany'] / input_df['TotalWorkingYears_Replaced']
         input_df['PromotionDelay'] = input_df['YearsAtCompany'] - input_df['YearsSinceLastPromotion']
         input_df['WorkLifeRiskIndex'] = input_df['JobSatisfaction'] + input_df['EnvironmentSatisfaction'] + input_df['WorkLifeBalance']
         
-        # STEP 2: Encode categorical
         input_encoded = pd.get_dummies(input_df, columns=categorical_cols, drop_first=True)
-        
-        # STEP 3: Create DataFrame with ALL expected columns
         final_features = pd.DataFrame(0, index=[0], columns=expected_features)
         for col in input_encoded.columns:
             if col in final_features.columns:
                 final_features[col] = input_encoded[col].values
         
         final_features = final_features.astype(float)
-        
-        # STEP 4: Scale and predict
         scaled_input = scaler.transform(final_features)
         prediction = model.predict(scaled_input)[0]
         probability = model.predict_proba(scaled_input)[0][1]
@@ -161,7 +138,7 @@ if model is not None:
             st.metric(label="Probability of Staying", value=f"{retention_probability * 100:.1f}%")
 
 else:
-    st.error("❌ Model not loaded. Please check:")
-    st.code("1. Run Employee_Attrition.ipynb first\n2. Check Model/ folder exists\n3. Verify all 5 .pkl files are present")
+    st.error("❌ Model not loaded!")
+    st.code("Run Employee_Attrition.ipynb first to create Model files")
 
-st.caption("Employee Attrition Predictor v3.1 - Fixed")
+st.caption("Employee Attrition Predictor v3.1")
